@@ -1,0 +1,93 @@
+name: Build Release Binaries
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Build for ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          # Linux x64
+          - os: ubuntu-latest
+            target: linux-x64
+            
+          # Windows x64 
+          - os: windows-latest
+            target: windows-x64
+            
+          # macOS (Intel)
+          - os: macos-13
+            target: macos-x64
+            
+          # macOS (Apple Silicon)
+          - os: macos-latest
+            target: macos-arm64
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Dart SDK
+        uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Get dependencies
+        run: dart pub get
+
+      - name: Run tests
+        run: dart test
+
+      - name: Compile binary
+        run: dart compile exe bin/simpleweb.dart -o simpleweb-${{ matrix.target }}${{ runner.os == 'Windows' && '.exe' || '' }}
+
+      - name: Upload binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: simpleweb-${{ matrix.target }}${{ runner.os == 'Windows' && '.exe' || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ARM builds using self-hosted runners (if available) or Docker emulation
+  build-arm:
+    name: Build ARM binaries
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - target: linux-arm64
+            platform: linux/arm64
+          - target: linux-arm
+            platform: linux/arm/v7
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build ARM binary
+        run: |
+          docker run --rm --platform ${{ matrix.platform }} \
+            -v ${{ github.workspace }}:/workspace \
+            -w /workspace \
+            dart:stable sh -c "
+              dart pub get &&
+              dart test &&
+              dart compile exe bin/simpleweb.dart -o simpleweb-${{ matrix.target }}
+            "
+
+      - name: Upload ARM binary to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: simpleweb-${{ matrix.target }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
