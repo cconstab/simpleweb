@@ -20,6 +20,11 @@ Use short arguments:
 dart run bin/simpleweb.dart -t "Welcome!" -c red -p 8080
 ```
 
+Add a message to greetings:
+```bash
+dart run bin/simpleweb.dart -m "Greetings from our server!" -c green
+```
+
 Bind to all addresses:
 ```bash
 dart run bin/simpleweb.dart --address 0.0.0.0 --port 3000
@@ -28,6 +33,6 @@ dart run bin/simpleweb.dart --address 0.0.0.0 --port 3000
 ## Routes
 
 - `/` - Shows your custom text
-- `/hello/yourname` - Personal greeting
-- `/json` - JSON response  
+- `/hello/yourname` - Personal greeting (supports spaces: `/hello/John%20Doe`)
+- `/json` - JSON response with your text
 - `/favicon.ico` - @ symbol favicon

@@ -33,6 +33,7 @@ void main(List<String> arguments) async {
   final parser = ArgParser()
     ..addOption('text', abbr: 't', defaultsTo: 'Hello, World!', help: 'The text to display on the homepage')
     ..addOption('color', abbr: 'c', defaultsTo: 'white', help: 'Background color for the homepage')
+    ..addOption('message', abbr: 'm', defaultsTo: '', help: 'Message to display before greetings in /hello endpoint')
     ..addOption('address', abbr: 'a', defaultsTo: 'localhost', help: 'Address to bind the server to')
     ..addOption('port', abbr: 'p', defaultsTo: '8080', help: 'Port number for the server')
     ..addFlag('help', abbr: 'h', negatable: false, help: 'Show this help message');
@@ -51,6 +52,7 @@ void main(List<String> arguments) async {
       print('Examples:');
       print('  dart run bin/simpleweb.dart --text "Welcome!" --color blue');
       print('  dart run bin/simpleweb.dart -t "Hello World" -c red -p 8081');
+      print('  dart run bin/simpleweb.dart -m "Greetings from the server!" -c green');
       print('  dart run bin/simpleweb.dart --address 0.0.0.0 --port 3000');
       return;
     }
@@ -58,6 +60,7 @@ void main(List<String> arguments) async {
     // Parse arguments
     final displayText = results['text'] as String;
     final backgroundColor = results['color'] as String;
+    final helloMessage = results['message'] as String;
     final address = results['address'] as String;
     final port = int.tryParse(results['port'] as String) ?? 8080;
 
@@ -121,12 +124,14 @@ void main(List<String> arguments) async {
     });
 
     router.get('/hello/<name>', (Request request, String name) {
+      // Decode URL-encoded characters (like %20 for spaces)
+      final decodedName = Uri.decodeComponent(name);
       final html =
           '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Hello $name - Simple Dart Web Server</title>
+    <title>Hello $decodedName - Simple Dart Web Server</title>
     <style>
         body {
             background-color: $backgroundColor;
@@ -152,7 +157,7 @@ void main(List<String> arguments) async {
     </style>
 </head>
 <body>
-    <div class="main-text">Hello, $name!</div>
+    <div class="main-text">${helloMessage.isNotEmpty ? '$helloMessage<br><br>' : ''}Hello, $decodedName!</div>
 </body>
 </html>
     ''';
@@ -161,7 +166,7 @@ void main(List<String> arguments) async {
 
     router.get('/json', (Request request) {
       return Response.ok(
-        '{"message": "This is a JSON response", "timestamp": "${DateTime.now()}"}',
+        '{"text": "$displayText", "timestamp": "${DateTime.now()}"}',
         headers: {'Content-Type': 'application/json'},
       );
     });
