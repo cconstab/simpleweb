@@ -46,12 +46,26 @@ jobs:
         run: dart test
 
       - name: Compile binary
-        run: dart compile exe bin/simpleweb.dart -o simpleweb-${{ matrix.target }}${{ runner.os == 'Windows' && '.exe' || '' }}
+        run: dart compile exe bin/simpleweb.dart -o simpleweb${{ runner.os == 'Windows' && '.exe' || '' }}
 
-      - name: Upload binary to release
+      - name: Create archive (Windows/macOS - ZIP)
+        if: runner.os == 'Windows' || runner.os == 'macOS'
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" == "Windows" ]; then
+            7z a simpleweb-${{ matrix.target }}.zip simpleweb.exe
+          else
+            zip simpleweb-${{ matrix.target }}.zip simpleweb
+          fi
+
+      - name: Create archive (Linux - TGZ)
+        if: runner.os == 'Linux'
+        run: tar -czf simpleweb-${{ matrix.target }}.tgz simpleweb
+
+      - name: Upload archive to release
         uses: softprops/action-gh-release@v1
         with:
-          files: simpleweb-${{ matrix.target }}${{ runner.os == 'Windows' && '.exe' || '' }}
+          files: simpleweb-${{ matrix.target }}.${{ runner.os == 'Linux' && 'tgz' || 'zip' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -85,12 +99,15 @@ jobs:
             dart:stable sh -c "
               dart pub get &&
               dart test &&
-              dart compile exe bin/simpleweb.dart -o simpleweb-${{ matrix.target }}
+              dart compile exe bin/simpleweb.dart -o simpleweb
             "
 
-      - name: Upload ARM binary to release
+      - name: Create ARM archive (TGZ)
+        run: tar -czf simpleweb-${{ matrix.target }}.tgz simpleweb
+
+      - name: Upload ARM archive to release
         uses: softprops/action-gh-release@v1
         with:
-          files: simpleweb-${{ matrix.target }}
+          files: simpleweb-${{ matrix.target }}.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
